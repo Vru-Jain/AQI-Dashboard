@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "Community Health & Air Quality Dashboard",
   description:
     "Analyzing respiratory health and pollution exposure from community survey data — British Council Climate Action Project",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
