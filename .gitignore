@@ -1,6 +1,6 @@
 # Project specific
 *.xlsx
-Climate Skills Questionnaire (Responses).xlsx
+data.xlsx
 *.csv
 start_log.txt
 

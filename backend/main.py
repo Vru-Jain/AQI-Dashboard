@@ -25,10 +25,10 @@ app.add_middleware(
 
 # ── Load Data ──
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(BASE_DIR, "Climate Skills Questionnaire (Responses).xlsx")
+DATA_PATH = os.path.join(BASE_DIR, "data.xlsx")
 
 # Check for Render Secret File (overrides local file)
-RENDER_SECRET_PATH = "/etc/secrets/Climate Skills Questionnaire (Responses).xlsx"
+RENDER_SECRET_PATH = "/etc/secrets/data.xlsx"
 if os.path.exists(RENDER_SECRET_PATH):
     DATA_PATH = RENDER_SECRET_PATH
 
