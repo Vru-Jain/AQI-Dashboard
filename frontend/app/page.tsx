@@ -380,7 +380,7 @@ export default function Dashboard() {
                   <CardTitle>Respiratory Risk Prediction</CardTitle>
                 </div>
                 <CardDescription>
-                  Random Forest model trained on survey data (10 features, 200 estimators, 66.6% cross-validation accuracy)
+                  SVM (Linear kernel) model trained on survey data (10 features, 54.4% accuracy, F1: 0.476)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">

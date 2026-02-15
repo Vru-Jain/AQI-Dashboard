@@ -244,7 +244,7 @@ def predict(
         else:
             encoded_values.append(0)
 
-    X_input = np.array(encoded_values).reshape(1, -1)
+    X_input = pd.DataFrame([encoded_values], columns=FEATURE_COLS)
     proba = model.predict_proba(X_input)[0]
     risk_pct = round(float(proba[1]) * 100, 1)
 
