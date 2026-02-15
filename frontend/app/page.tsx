@@ -76,14 +76,25 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [s, f, dv, se, ho, sy, du, ag, ch] = await Promise.all([
-          api.getStats(), api.getFilters(), api.getDoctorVisits(),
-          api.getSeason(), api.getHousing(), api.getSymptoms(),
-          api.getDustEntry(), api.getAgeDistribution(), api.getChestHeaviness(),
-        ]);
-        setStats(s); setFilters(f); setDoctorVisits(dv);
-        setSeasonData(se); setHousingData(ho); setSymptomsData(sy);
-        setDustData(du); setAgeData(ag); setChestData(ch);
+        // Fetch all data in one request for performance
+        const data = await api.getDashboardData();
+        const { stats, charts } = data;
+
+        setStats(stats);
+
+        // Load charts
+        setDoctorVisits(charts.doctor_visits);
+        setSeasonData(charts.season);
+        setHousingData(charts.housing);
+        setSymptomsData(charts.symptoms);
+        setDustData(charts.dust_entry);
+        setAgeData(charts.age_distribution);
+        setChestData(charts.chest_heaviness);
+
+        // Fetch filters in parallel (static data)
+        const f = await api.getFilters();
+        setFilters(f);
+
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load data");
       } finally {

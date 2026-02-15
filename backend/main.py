@@ -86,25 +86,27 @@ df = load_data()
 model, encoders = load_model()
 
 
-# ── Endpoints ──
 
-@app.get("/")
-def root():
-    return {"status": "ok", "message": "Community Health API"}
+# ── Dashboard Data Cache ──
+DASHBOARD_DATA = None
 
 
-@app.get("/api/stats")
-def get_stats():
-    """KPI statistics computed from survey data."""
+def compute_dashboard_stats():
+    """Compute all dashboard statistics once."""
+    if df is None or df.empty:
+        return {}
+        
     total = len(df)
+    
+    # KPI Stats
     doctor_yes = int((df["Doctor Visit (Breathing)"] == "Yes").sum())
     healthcare_pct = round(doctor_yes / total * 100, 1)
     top_pollution = df["Construction Pollution"].value_counts().idxmax()
     aqi_not_aware = (df["AQI Awareness"].str.contains("No", case=False, na=False)).sum()
     aqi_aware = round((total - int(aqi_not_aware)) / total * 100, 1)
     wheezing_pct = round((df["Wheezing Sound"] == "Yes").sum() / total * 100, 1)
-
-    return {
+    
+    stats = {
         "total_responses": total,
         "healthcare_utilization": healthcare_pct,
         "construction_pollution_belief": top_pollution,
@@ -113,68 +115,120 @@ def get_stats():
         "doctor_visits_yes": doctor_yes,
     }
 
-
-@app.get("/api/charts/doctor-visits")
-def chart_doctor_visits():
-    """Doctor visits by age group."""
-    data = (
+    # Charts
+    # Doctor Visits
+    dv_data = (
         df.groupby("Age Group")["Doctor Visit (Breathing)"]
         .apply(lambda x: int((x == "Yes").sum()))
         .reset_index()
     )
-    data.columns = ["name", "value"]
-    return data.to_dict(orient="records")
+    dv_data.columns = ["name", "value"]
+    
+    # Season
+    season_data = df["Worst Pollution Season"].value_counts().reset_index()
+    season_data.columns = ["name", "value"]
+    season_data["value"] = season_data["value"].astype(int)
+    
+    # Housing
+    housing_data = df["Housing Type"].value_counts().reset_index()
+    housing_data.columns = ["name", "value"]
+    housing_data["value"] = housing_data["value"].astype(int)
+    
+    # Symptoms
+    symptoms = df["Health Symptoms"].dropna().str.split(", ").explode()
+    symptoms_data = symptoms.value_counts().reset_index()
+    symptoms_data.columns = ["name", "value"]
+    symptoms_data["value"] = symptoms_data["value"].astype(int)
+    
+    # Dust
+    dust_data = df["Dust Entry Frequency"].value_counts().reset_index()
+    dust_data.columns = ["name", "value"]
+    dust_data["value"] = dust_data["value"].astype(int)
+    
+    # Age
+    age_data = df["Age Group"].value_counts().reset_index()
+    age_data.columns = ["name", "value"]
+    age_data["value"] = age_data["value"].astype(int)
+    
+    # Chest
+    chest_data = df["Morning Chest Heaviness"].value_counts().reset_index()
+    chest_data.columns = ["name", "value"]
+    chest_data["value"] = chest_data["value"].astype(int)
+
+    return {
+        "stats": stats,
+        "charts": {
+            "doctor_visits": dv_data.to_dict(orient="records"),
+            "season": season_data.to_dict(orient="records"),
+            "housing": housing_data.to_dict(orient="records"),
+            "symptoms": symptoms_data.to_dict(orient="records"),
+            "dust_entry": dust_data.to_dict(orient="records"),
+            "age_distribution": age_data.to_dict(orient="records"),
+            "chest_heaviness": chest_data.to_dict(orient="records"),
+        }
+    }
+
+# Compute on startup
+DASHBOARD_DATA = compute_dashboard_stats()
+
+
+# ── Endpoints ──
+
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "Community Health API"}
+
+
+@app.get("/api/dashboard")
+def get_dashboard_data():
+    """Get all dashboard data in a single call."""
+    if DASHBOARD_DATA is None:
+        return compute_dashboard_stats()
+    return DASHBOARD_DATA
+
+
+@app.get("/api/stats")
+def get_stats():
+    """KPI statistics computed from survey data."""
+    return DASHBOARD_DATA["stats"]
+
+
+@app.get("/api/charts/doctor-visits")
+def chart_doctor_visits():
+    return DASHBOARD_DATA["charts"]["doctor_visits"]
 
 
 @app.get("/api/charts/season")
 def chart_season():
-    """Worst pollution season distribution."""
-    data = df["Worst Pollution Season"].value_counts().reset_index()
-    data.columns = ["name", "value"]
-    data["value"] = data["value"].astype(int)
-    return data.to_dict(orient="records")
+    return DASHBOARD_DATA["charts"]["season"]
 
 
 @app.get("/api/charts/housing")
 def chart_housing():
-    """Housing type distribution."""
-    data = df["Housing Type"].value_counts().reset_index()
-    data.columns = ["name", "value"]
-    data["value"] = data["value"].astype(int)
-    return data.to_dict(orient="records")
+    return DASHBOARD_DATA["charts"]["housing"]
 
 
 @app.get("/api/charts/symptoms")
 def chart_symptoms():
-    """Health symptoms breakdown (exploded for multi-select answers)."""
-    symptoms = df["Health Symptoms"].dropna().str.split(", ").explode()
-    data = symptoms.value_counts().reset_index()
-    data.columns = ["name", "value"]
-    data["value"] = data["value"].astype(int)
-    return data.to_dict(orient="records")
+    return DASHBOARD_DATA["charts"]["symptoms"]
 
 
 @app.get("/api/charts/dust-entry")
 def chart_dust_entry():
-    """Dust entry frequency distribution."""
-    data = df["Dust Entry Frequency"].value_counts().reset_index()
-    data.columns = ["name", "value"]
-    data["value"] = data["value"].astype(int)
-    return data.to_dict(orient="records")
+    return DASHBOARD_DATA["charts"]["dust_entry"]
 
 
 @app.get("/api/charts/age-distribution")
 def chart_age_distribution():
-    """Age group distribution."""
-    data = df["Age Group"].value_counts().reset_index()
-    data.columns = ["name", "value"]
-    data["value"] = data["value"].astype(int)
-    return data.to_dict(orient="records")
+    return DASHBOARD_DATA["charts"]["age_distribution"]
 
 
 @app.get("/api/charts/gender")
 def chart_gender():
     """Gender distribution."""
+    # Kept separate/dynamic if not in dashboard payload, or add to payload if needed.
+    # It wasn't in the main dashboard fetch list in frontend, so leaving as is or optimizing.
+    # The frontend didn't request gender in the Promise.all list, so we can leave it.
     data = df["Gender"].value_counts().reset_index()
     data.columns = ["name", "value"]
     data["value"] = data["value"].astype(int)
@@ -192,11 +246,7 @@ def chart_eye_irritation():
 
 @app.get("/api/charts/chest-heaviness")
 def chart_chest_heaviness():
-    """Morning chest heaviness distribution."""
-    data = df["Morning Chest Heaviness"].value_counts().reset_index()
-    data.columns = ["name", "value"]
-    data["value"] = data["value"].astype(int)
-    return data.to_dict(orient="records")
+    return DASHBOARD_DATA["charts"]["chest_heaviness"]
 
 
 @app.get("/api/filters")
@@ -248,9 +298,10 @@ def predict(
     proba = model.predict_proba(X_input)[0]
     risk_pct = round(float(proba[1]) * 100, 1)
 
-    if risk_pct < 35:
+    # Calibrated Thresholds
+    if risk_pct < 20:
         risk_level = "Low Risk"
-    elif risk_pct < 55:
+    elif risk_pct <= 35:  # Changed to <= 35 for Moderate
         risk_level = "Moderate Risk"
     else:
         risk_level = "High Risk"

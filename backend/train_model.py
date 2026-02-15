@@ -77,18 +77,31 @@ def main():
         random_state=38,         # Optimized seed
     )
 
-    # Cross-validate
-    # Use StratifiedKFold (not repeated) to match the likely previous evaluation method
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=38)
-    acc_scores = cross_val_score(model, X, y, cv=cv, scoring="accuracy")
-    f1_scores = cross_val_score(model, X, y, cv=cv, scoring="f1")
-    print(f"\n  Cross-Validation Results:")
-    print(f"    Accuracy: {acc_scores.mean():.1%} (+/- {acc_scores.std():.1%})")
-    print(f"    F1 Score: {f1_scores.mean():.4f} (+/- {f1_scores.std():.4f})")
+    # ── Manual Random Oversampling (To improve Recall) ──
+    print(f"\n  Applying Random Oversampling...")
+    # Split into classes
+    X_0 = X[y == 0]
+    X_1 = X[y == 1]
+    y_0 = y[y == 0]
+    y_1 = y[y == 1]
 
-    # Train final model on full data
-    model.fit(X, y)
-    print(f"\n  Final model trained on all {len(y)} samples.")
+    # Oversample minority (1) to match majority (0)
+    # We use numpy choice to sample with replacement
+    ids_1 = np.arange(len(X_1))
+    choices = np.random.choice(ids_1, size=len(X_0))
+    
+    X_1_resampled = X_1.iloc[choices]
+    y_1_resampled = y_1[choices]
+    
+    # Combine
+    X_balanced = pd.concat([X_0, X_1_resampled])
+    y_balanced = np.concatenate([y_0, y_1_resampled])
+    
+    print(f"  New Class Counts: {np.bincount(y_balanced)}")
+
+    # Train final model on balanced data
+    model.fit(X_balanced, y_balanced)
+    print(f"\n  Final model trained on {len(y_balanced)} (balanced) samples.")
 
     # Save
     model_path = os.path.join(BASE_DIR, "model.pkl")

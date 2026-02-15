@@ -42,8 +42,22 @@ export const api = {
     getGender: () => fetchJson<ChartItem[]>("/api/charts/gender"),
     getEyeIrritation: () => fetchJson<ChartItem[]>("/api/charts/eye-irritation"),
     getChestHeaviness: () => fetchJson<ChartItem[]>("/api/charts/chest-heaviness"),
+    getDashboardData: () => fetchJson<DashboardData>("/api/dashboard"),
     predict: (params: Record<string, string>) => {
         const qs = new URLSearchParams(params).toString();
         return fetchJson<PredictionResult>(`/api/predict?${qs}`);
     },
 };
+
+export interface DashboardData {
+    stats: Stats;
+    charts: {
+        doctor_visits: ChartItem[];
+        season: ChartItem[];
+        housing: ChartItem[];
+        symptoms: ChartItem[];
+        dust_entry: ChartItem[];
+        age_distribution: ChartItem[];
+        chest_heaviness: ChartItem[];
+    };
+}
