@@ -1,6 +1,7 @@
 """
 Training script for Respiratory Risk Prediction Model.
-Uses SVM (Linear kernel) — best algorithm for this small survey dataset (161 samples).
+Uses Random Forest — produces intuitive, proportional risk scores for small survey data (161 samples).
+Manually tuned for robustness: 300 estimators, max_depth=6, min_samples_leaf=3.
 
 Usage: python train_model.py
 Output: model.pkl, encoders.pkl
@@ -12,10 +13,9 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.svm import SVC
+from sklearn.preprocessing import LabelEncoder
 
 warnings.filterwarnings("ignore")
 
@@ -66,19 +66,15 @@ def main():
     encoders["__target__"] = le_target
     print(f"  Target distribution: {dict(zip(le_target.classes_, np.bincount(y)))}")
 
-    # Build model pipeline — SVM Linear with StandardScaler
-    # SVM Linear excels on small datasets by finding the optimal separating hyperplane
-    # with good generalization and less overfitting than tree-based methods
-    model = Pipeline([
-        ("scaler", StandardScaler()),
-        ("svm", SVC(
-            kernel="linear",
-            C=0.5,
-            probability=True,            # needed for predict_proba
-            class_weight="balanced",      # handles class imbalance
-            random_state=42,
-        )),
-    ])
+    # Random Forest — tuned for small dataset robustness
+    model = RandomForestClassifier(
+        n_estimators=300,        # Increased from 200 for stability
+        max_depth=6,             # Limit depth to prevent overfitting
+        min_samples_leaf=3,      # Require 3 samples per leaf
+        min_samples_split=5,
+        class_weight="balanced", # Handle class imbalance
+        random_state=42,
+    )
 
     # Cross-validate
     cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=10, random_state=42)
