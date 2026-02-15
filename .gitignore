@@ -3,6 +3,8 @@
 data.xlsx
 *.csv
 start_log.txt
+data_base64.txt
+temp_data.xlsx
 
 # Python
 __pycache__/

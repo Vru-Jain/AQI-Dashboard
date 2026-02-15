@@ -24,6 +24,11 @@ app.add_middleware(
 )
 
 # ── Load Data ──
+import base64
+import io
+# ... (imports)
+
+# ── Load Data ──
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data.xlsx")
 
@@ -31,6 +36,19 @@ DATA_PATH = os.path.join(BASE_DIR, "data.xlsx")
 RENDER_SECRET_PATH = "/etc/secrets/data.xlsx"
 if os.path.exists(RENDER_SECRET_PATH):
     DATA_PATH = RENDER_SECRET_PATH
+
+# Check for Base64 Env Var (Overrides everything)
+if "DATA_BASE64" in os.environ:
+    try:
+        print("Loading data from DATA_BASE64 environment variable...")
+        decoded_data = base64.b64decode(os.environ["DATA_BASE64"])
+        # Save to a temp file to be read by pandas
+        TEMP_DATA_PATH = os.path.join(BASE_DIR, "temp_data.xlsx")
+        with open(TEMP_DATA_PATH, "wb") as f:
+            f.write(decoded_data)
+        DATA_PATH = TEMP_DATA_PATH
+    except Exception as e:
+        print(f"Failed to decode DATA_BASE64: {e}")
 
 COLUMN_NAMES = [
     "Timestamp", "Age Group", "Gender", "Locality", "Years in Area",
